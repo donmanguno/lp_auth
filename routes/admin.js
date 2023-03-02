@@ -6,7 +6,7 @@ const packageJson = require('../package.json');
 const Logger = require('../lib/logger');
 
 const router = express.Router();
-const log = new Logger('routes/admin');
+const log = new Logger({ label: 'routes/admin' });
 
 router.get('/', (req, res) => {
     log.info('application info requested');

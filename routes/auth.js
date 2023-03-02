@@ -9,8 +9,10 @@ const { v4: uuidv4 } = require('uuid');
 
 const Logger = require('../lib/logger');
 
-const log = new Logger('routes/auth');
+const log = new Logger({ label: 'routes/auth' });
 const router = express.Router();
+// todo: implement max-keys?
+const codeCache = new NodeCache({ stdTTL: 3600 })
 
 const pubKey = process.env.PUBLIC_KEY.replaceAll('\\n', '\n')
 const privKey = process.env.PRIVATE_KEY.replaceAll('\\n', '\n')
@@ -41,14 +43,14 @@ function getConfig (req, res) {
     let authConfig = {
         implicit: {
             'LE Settings': {
-                'Authentication Endpoint': `${process.env.HOST}/api/auth/token`
+                'Authentication Endpoint': `${process.env.HOST}/auth/token`
             }
         },
         code: {
             'LE Settings': {
-                'Authentication Endpoint': `${process.env.HOST}/api/auth/code`,
-                'Token Endpoint': `${process.env.HOST}/api/auth/token`,
-                'Client ID': '[Site ID]',
+                'Authentication Endpoint': `${process.env.HOST}/auth/code`,
+                'Token Endpoint': `${process.env.HOST}/auth/token`,
+                'Client ID': `${req.query?.account || '[Site ID]'}`,
                 'Client Secret': 'Secret'
             }
         }
