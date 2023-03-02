@@ -14,8 +14,12 @@ const router = express.Router();
 // todo: implement max-keys?
 const codeCache = new NodeCache({ stdTTL: 3600 })
 
-const pubKey = process.env.PUBLIC_KEY.replaceAll('\\n', '\n')
-const privKey = process.env.PRIVATE_KEY.replaceAll('\\n', '\n')
+let pubKey, privKey
+try {
+    pubKey = fs.readFileSync(process.env.PUBLIC_KEY, 'utf8')
+    privKey = fs.readFileSync(process.env.PRIVATE_KEY, 'utf8')
+} catch (e) { log.warn('no keys')}
+
 const ttlSec = 86400
 
 const pubKeyString = pubKey ? pubKey.replace(/(-{5}[\w\s]+-{5})|\n/g,'') : undefined;
