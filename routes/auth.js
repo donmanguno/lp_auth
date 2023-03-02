@@ -69,6 +69,7 @@ function token (req, res) {
     log.info('token requested')
     // code flow
     if (req.body && req.body.grant_type === 'authorization_code') {
+        log.debug('code flow')
         let details = codeCache.get(req.body.code)
         if (details) {
             let token = generateJWT(details.payload, details.ttl)
@@ -87,6 +88,7 @@ function token (req, res) {
         } else res.status(404).send('couldnae find code')
     // implicit flow (direct token request from page)
     } else {
+        log.debug('implicit flow')
         let token = generateJWT(req.body && req.body.payload, req.body && req.body.ttl)
         if (token) res.status(200).send(token)
         else res.status(404).send('couldnae make token')
@@ -107,6 +109,7 @@ async function tokenRedirect (req, res) {
         windowConfig = JSON.parse(req.query.state).lpUnifiedWindowConfig;
         // openID version of auth connector - window config is already in redirect_uri
     } else {
+        log.warn(`old auth connector version`)
         windowConfig = JSON.parse(redirect.searchParams.get('lpUnifiedWindowConfig'));
     }
 
@@ -163,6 +166,7 @@ async function codeRedirect (req, res) {
         windowConfig = JSON.parse(req.query.state).lpUnifiedWindowConfig;
         // openID version of auth connector - window config is already in redirect_uri
     } else {
+        log.warn(`old auth connector version`)
         windowConfig = JSON.parse(redirect.searchParams.get('lpUnifiedWindowConfig'));
     }
 
@@ -221,6 +225,7 @@ async function delegate (req, res) {
 
 function generateJWT (payload, ttl) {
     log.debug('generating jwt')
+    log.silly(`provided payload: ${JSON.stringify(payload)}`)
     let nowSec = Math.round(new Date().getTime() / 1000)
     // generate default payload
     let _payload = {
@@ -233,8 +238,11 @@ function generateJWT (payload, ttl) {
     if (payload) _.merge(_payload, payload)
     // set iat from ttl if provided
     if (ttl) _payload.exp = _payload.iat + ttl
+    log.silly(`final payload: ${JSON.stringify(_payload)}`)
 
-    return jwt.sign(_payload, privKey, { algorithm: 'RS256'});
+    let token = jwt.sign(_payload, privKey, { algorithm: 'RS256'});
+    log.debug(`returning token: ${token}`)
+    return token;
 }
 
 function delegatedData (req, res) {
