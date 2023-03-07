@@ -1,6 +1,9 @@
 # IntelliJ project files
 .idea
 node_modules
+keys
 *.iml
 out
 gen
+Dockerfile
+.dockerignore

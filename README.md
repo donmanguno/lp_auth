@@ -23,4 +23,5 @@
 PRIVATE_KEY=/path/to/privkey.pem
 PUBLIC_KEY=/path/to/pubkey.pem
 HOST=https://example.com
+TOKEN_TTL_SECONDS=86400
 ```

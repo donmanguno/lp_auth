@@ -1,31 +1,24 @@
 'use strict';
 
-const fs = require('fs');
 const express = require('express');
-const jwt = require('jsonwebtoken');
-const _ = require('lodash');
 const NodeCache = require('node-cache');
 const { v4: uuidv4 } = require('uuid');
 
+// import utils
 const Logger = require('../lib/logger');
+const CONFIG = require('../config/config')
+const generateJWT = require('../lib/generateJWT');
+
+// import routes
+const { configRouter, pubkeyRouter } = require('./auth/config')
 
 const log = new Logger({ label: 'routes/auth' });
 const router = express.Router();
 // todo: implement max-keys?
 const codeCache = new NodeCache({ stdTTL: 3600 })
 
-let pubKey, privKey
-try {
-    pubKey = fs.readFileSync(process.env.PUBLIC_KEY, 'utf8')
-    privKey = fs.readFileSync(process.env.PRIVATE_KEY, 'utf8')
-} catch (e) { log.warn('no keys')}
-
-const ttlSec = 86400
-
-const pubKeyString = pubKey ? pubKey.replace(/(-{5}[\w\s]+-{5})|\n/g,'') : undefined;
-
-router.get('/pubkey', getPubKey);
-router.get('/config', getConfig);
+router.use('/pubkey', pubkeyRouter);
+router.use('/config', configRouter);
 router.post('/token', token);
 router.get('/token', tokenRedirect);
 router.post('/code', code);
@@ -36,39 +29,11 @@ router.get('/delegatedData', delegatedData);
 module.exports = router;
 
 // request handlers
-function getPubKey (req, res) {
-    log.info('public key requested')
-    if (pubKeyString) res.status(200).send(pubKeyString)
-    else res.status(404).send()
-}
-
-function getConfig (req, res) {
-    log.info('configuration info requested')
-    let authConfig = {
-        implicit: {
-            'LE Settings': {
-                'Authentication Endpoint': `${process.env.HOST}/auth/token`
-            }
-        },
-        code: {
-            'LE Settings': {
-                'Authentication Endpoint': `${process.env.HOST}/auth/code`,
-                'Token Endpoint': `${process.env.HOST}/auth/token`,
-                'Client ID': `${req.query?.account || '[Site ID]'}`,
-                'Client Secret': 'Secret'
-            }
-        }
-
-    }
-
-    if (pubKey) authConfig.both = { 'JWT Public Key': pubKeyString }
-    res.status(200).send(authConfig);
-}
-
 function token (req, res) {
     log.info('token requested')
+    let defaultTTL = CONFIG.defaultTTL
     // code flow
-    if (req.body && req.body.grant_type === 'authorization_code') {
+    if (req.body?.grant_type === 'authorization_code') {
         log.debug('code flow')
         let details = codeCache.get(req.body.code)
         if (details) {
@@ -78,7 +43,7 @@ function token (req, res) {
                     access_token: token,
                     id_token: token,
                     token_type: 'bearer',
-                    expires_in: details.ttl | ttlSec
+                    expires_in: details.ttl | defaultTTL
                 }
                 // delegation token requires scope
                 if (details.scope) response.scope = details.scope
@@ -89,7 +54,7 @@ function token (req, res) {
     // implicit flow (direct token request from page)
     } else {
         log.debug('implicit flow')
-        let token = generateJWT(req.body && req.body.payload, req.body && req.body.ttl)
+        let token = generateJWT(req.body?.payload, req.body?.ttl)
         if (token) res.status(200).send(token)
         else res.status(404).send('couldnae make token')
     }
@@ -107,7 +72,7 @@ async function tokenRedirect (req, res) {
     if (req.query.response_type === 'id_token') {
         params.append('state',req.query.state);
         windowConfig = JSON.parse(req.query.state).lpUnifiedWindowConfig;
-        // openID version of auth connector - window config is already in redirect_uri
+    // openID version of auth connector - window config is already in redirect_uri
     } else {
         log.warn(`old auth connector version`)
         windowConfig = JSON.parse(redirect.searchParams.get('lpUnifiedWindowConfig'));
@@ -205,7 +170,6 @@ async function delegate (req, res) {
       params = new URLSearchParams(),
       code = uuidv4();
 
-
     if (code) {
         codeCache.set(code, {
             payload: {
@@ -223,28 +187,6 @@ async function delegate (req, res) {
     }
 }
 
-function generateJWT (payload, ttl) {
-    log.debug('generating jwt')
-    log.silly(`provided payload: ${JSON.stringify(payload)}`)
-    let nowSec = Math.round(new Date().getTime() / 1000)
-    // generate default payload
-    let _payload = {
-        iss: process.env.HOST,
-        iat: nowSec,
-        exp: nowSec + ttlSec,
-        sub: Math.random().toString(36).substring(2)
-    }
-    // merge provided payload with default
-    if (payload) _.merge(_payload, payload)
-    // set iat from ttl if provided
-    if (ttl) _payload.exp = _payload.iat + ttl
-    log.silly(`final payload: ${JSON.stringify(_payload)}`)
-
-    let token = jwt.sign(_payload, privKey, { algorithm: 'RS256'});
-    log.debug(`returning token: ${token}`)
-    return token;
-}
-
 function delegatedData (req, res) {
     log.debug(`delegation authorization: ${req.headers.authorization}`)
     if (req.headers.authorization === 'Bearer {$botContext.cidp_accessToken}') {
@@ -253,5 +195,3 @@ function delegatedData (req, res) {
         res.status(200).send('here\'s yer data!')
     }
 }
-
-

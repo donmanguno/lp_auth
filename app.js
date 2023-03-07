@@ -4,6 +4,7 @@ const cors = require('cors')
 
 const adminRouter = require('./routes/admin');
 const authRouter = require('./routes/auth');
+const { OIDConfigRouter } = require('./routes/auth/config')
 const Logger = require("./lib/logger");
 
 const log = new Logger({ label: 'app' });
@@ -21,6 +22,7 @@ app.use((req, res, next) => {
 // ROUTES
 app.use('/admin', adminRouter);
 app.use('/auth', authRouter);
+app.use('/.well-known/openid-configuration', OIDConfigRouter)
 
 // LISTEN
 let port = process.env.PORT || 3333
