@@ -44,21 +44,26 @@ module.exports = {
 
 function getConfig (req) {
     let authConfig = {
-        implicit: {
-            'LE Settings': {
-                'Authentication Endpoint': `${process.env.HOST}/auth/token`
-            }
-        },
-        code: {
-            'LE Settings': {
+        'LE Settings': {
+            implicit: {
+                'JWT issuer (iss)': `${process.env.HOST}`,
+                'Authentication Endpoint': `${process.env.HOST}/auth/token`,
+                'JWT Public Key': pubKeyString,
+                'JS Method Name': 'lpGetAuthenticationToken',
+                'JS Context': 'window'
+            },
+            code: {
+                'JWT issuer (iss)': `${process.env.HOST}`,
                 'Authentication Endpoint': `${process.env.HOST}/auth/code`,
                 'Token Endpoint': `${process.env.HOST}/auth/token`,
                 'Client ID': `${req.query?.account || '[Site ID]'}`,
-                'Client Secret': 'Secret'
+                'Client Secret': 'Secret',
+                'JWT Public Key': pubKeyString,
+                'JS Method Name': 'lpGetAuthenticationCode',
+                'JS Context': 'window'
             }
-        }
+        },
     }
-    if (pubKey) authConfig.both = { 'JWT Public Key': pubKeyString }
     authConfig.oidConfig = getOIDConfig()
 
     return authConfig;
