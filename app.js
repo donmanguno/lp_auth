@@ -1,15 +1,17 @@
 const express = require('express');
 const cors = require('cors')
-
-const { OIDConfigRouter } = require('./routes/auth/config')
-const Logger = require("./lib/logger");
-const NodeCache = require("node-cache");
-
-const log = new Logger({ label: 'app' });
+const NodeCache = require('node-cache');
 
 // GLOBALS
 // todo: implement max-keys?
 global.codeCache = new NodeCache({ stdTTL: 3600 })
+
+const { OIDConfigRouter } = require('./routes/auth/config')
+const Logger = require("./lib/logger");
+
+const log = new Logger({ label: 'app' });
+
+
 
 /////////////////
 // EXPRESS APP //
