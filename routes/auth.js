@@ -38,7 +38,7 @@ module.exports = router;
  * @param {e.Response} res
  * @param {Function} res.status
  */
-function token (req, res) {
+async function token (req, res) {
     log.info('token requested')
     let defaultTTL = CONFIG.defaultTTL
     // code flow
@@ -46,7 +46,7 @@ function token (req, res) {
         log.debug('code flow')
         let details = codeCache.get(req.body.code)
         if (details) {
-            let token = generateJWT(details.payload, details.ttl)
+            let token = await generateJWT(details.payload, details.ttl)
             if (token) {
                 let response = {
                     access_token: token,
@@ -63,7 +63,7 @@ function token (req, res) {
     // implicit flow (direct token request from page)
     } else {
         log.debug('implicit flow')
-        let token = generateJWT(req.body?.payload, req.body?.ttl)
+        let token = await generateJWT(req.body?.payload, req.body?.ttl)
         if (token) res.status(200).send(token)
         else res.status(404).send('couldnae make token')
     }
