@@ -3,6 +3,7 @@ const {v4: uuidv4} = require("uuid");
 
 const Logger = require('../../lib/logger');
 const generateJWT = require("../../lib/generateJWT");
+const {BadRequest} = require("../../lib/errors");
 
 const log = new Logger({ label: 'routes/auth/implicitFlow' });
 const router = express.Router();
@@ -22,12 +23,12 @@ module.exports = router
  * @param {Number} [req.body.ttl]
  * @param {e.Response} res
  * @param {Function} res.status
+ * @param {Function} res.setHeader
  */
-function token (req, res) {
+async function token (req, res) {
     log.info('token requested')
-    let token = generateJWT(req.body?.payload, req.body?.ttl)
-    if (token) res.status(200).send(token)
-    else res.status(404).send('couldn\'t make token')
+    let token = await generateJWT(req.body?.payload, req.body?.ttl)
+    res.setHeader('content-type', 'text/plain').status(200).send(token)
 }
 
 /**
@@ -44,7 +45,7 @@ function token (req, res) {
  */
 async function tokenRedirect (req, res) {
     log.info('token redirect requested')
-    if (!req.query.redirect_uri) res.status(400).send('redirect_uri param required')
+    if (!req.query.redirect_uri) throw new BadRequest('redirect_uri param required')
 
     let redirect = new URL(req.query.redirect_uri)
       ,params = new URLSearchParams(redirect.search)
@@ -52,7 +53,8 @@ async function tokenRedirect (req, res) {
 
     // OAuth 2 RFC version of auth connector - window configuration is in the "state" parameter
     // "state" parameter must be added to the redirect_uri
-    if (req.query.response_type === 'id_token') {
+    if (req.query.response_type === 'code') throw new BadRequest('code redirect requested at token redirect endpoint')
+    else if (req.query.response_type === 'id_token') {
         params.append('state', req.query.state);
         windowConfig = JSON.parse(req.query.state)?.['lpUnifiedWindowConfig'];
 
@@ -66,7 +68,7 @@ async function tokenRedirect (req, res) {
     let sub = windowConfig?.['engConf']?.['svid']
 
     let payload = { sub };
-    let token = generateJWT(payload)
+    let token = await generateJWT(payload)
     params.append('token', token);
     redirect.search = params.toString();
     res.redirect(redirect.href);

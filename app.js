@@ -1,3 +1,4 @@
+require('express-async-errors');
 const express = require('express');
 const cors = require('cors')
 const NodeCache = require('node-cache');
@@ -12,13 +13,13 @@ const Logger = require("./lib/logger");
 const log = new Logger({ label: 'app' });
 
 
-
 /////////////////
 // EXPRESS APP //
 /////////////////
 
 const adminRouter = require('./routes/admin');
 const authRouter = require('./routes/auth');
+const errorHandling = require('./middleware/errorHandling')
 
 const app = express();
 
@@ -35,6 +36,8 @@ app.use((req, res, next) => {
 app.use('/admin', adminRouter);
 app.use('/auth', authRouter);
 app.use('/.well-known/openid-configuration', OIDConfigRouter)
+
+app.use(errorHandling)
 
 // LISTEN
 let port = process.env.PORT || 3333

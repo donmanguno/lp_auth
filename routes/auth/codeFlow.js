@@ -2,8 +2,9 @@ const express = require('express');
 const {v4: uuidv4} = require("uuid");
 
 const Logger = require('../../lib/logger');
-const CONFIG = require("../../config/config");
-const generateJWT = require("../../lib/generateJWT");
+const CONFIG = require('../../config/config');
+const generateJWT = require('../../lib/generateJWT');
+const {BadRequest} = require('../../lib/errors')
 
 const log = new Logger({ label: 'routes/auth/codeFlow' });
 const router = express.Router();
@@ -21,12 +22,13 @@ module.exports = router
  * @param {Object} [req.body]
  * @param {e.Response} res
  * @param {Function} res.status
+ * @param {Function} res.setHeader
  */
 function code (req, res) {
     log.info('code requested')
     let code = uuidv4();
     codeCache.set(code, req.body)
-    res.status(200).send(code)
+    res.setHeader('content-type', 'text/plain').status(200).send(code)
 }
 
 /**
@@ -43,7 +45,7 @@ function code (req, res) {
  */
 async function codeRedirect (req, res) {
     log.info('code redirect requested')
-    if (!req.query.redirect_uri) res.status(400).send('redirect_uri param required')
+    if (!req.query.redirect_uri) throw new BadRequest('redirect_uri param required')
 
     let redirect = new URL(req.query.redirect_uri)
       ,params = new URLSearchParams(redirect.search)
@@ -51,7 +53,8 @@ async function codeRedirect (req, res) {
 
     // OAuth 2 RFC version of auth connector - window configuration is in the "state" parameter
     // "state" parameter must be added to the redirect_uri
-    if (req.query.response_type === 'code') {
+    if (req.query.response_type === 'id_token') throw new BadRequest('token redirect requested at code redirect endpoint')
+    else if (req.query.response_type === 'code') {
         params.append('state', req.query.state);
         windowConfig = JSON.parse(req.query.state)?.['lpUnifiedWindowConfig'];
 
@@ -84,13 +87,13 @@ async function codeRedirect (req, res) {
  * @param {e.Response} res
  * @param {Function} res.status
  */
-function token (req, res) {
+async function token (req, res) {
     log.info('token requested')
     if (req.body?.grant_type !== 'authorization_code') res.status(404).send('grant_type: authorization_code required')
 
     let details = codeCache.get(req.body.code)
     if (details) {
-        let token = generateJWT(details.payload, details.ttl)
+        let token = await generateJWT(details.payload, details.ttl)
         if (token) {
             let response = {
                 access_token: token,
