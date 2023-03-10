@@ -55,7 +55,7 @@ function getConfig (req) {
             code: {
                 'JWT issuer (iss)': `${process.env.HOST}`,
                 'Authentication Endpoint': `${process.env.HOST}/auth/code`,
-                'Token Endpoint': `${process.env.HOST}/auth/token`,
+                'Token Endpoint': `${process.env.HOST}/auth/code/token`,
                 'Client ID': `${req.query?.account || '[Site ID]'}`,
                 'Client Secret': 'Secret',
                 'JWT Public Key': pubKeyString,
@@ -73,7 +73,7 @@ function getOIDConfig() {
     return {
         "issuer": `${process.env.HOST}`,
         "authorization_endpoint": `${process.env.HOST}/auth/code`,
-        "token_endpoint": `${process.env.HOST}/auth/token`,
+        "token_endpoint": `${process.env.HOST}/auth/code/token`,
         // "token_endpoint_auth_methods_supported": ["client_secret_basic", "private_key_jwt"],
         // "token_endpoint_auth_signing_alg_values_supported": ["RS256", "ES256"],
         // "userinfo_endpoint":

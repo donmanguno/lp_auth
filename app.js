@@ -1,9 +1,6 @@
-const serverless = require('serverless-http');
 const express = require('express');
 const cors = require('cors')
 
-const adminRouter = require('./routes/admin');
-const authRouter = require('./routes/auth');
 const { OIDConfigRouter } = require('./routes/auth/config')
 const Logger = require("./lib/logger");
 const NodeCache = require("node-cache");
@@ -17,6 +14,9 @@ global.codeCache = new NodeCache({ stdTTL: 3600 })
 /////////////////
 // EXPRESS APP //
 /////////////////
+
+const adminRouter = require('./routes/admin');
+const authRouter = require('./routes/auth');
 
 const app = express();
 
